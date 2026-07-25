@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import *
-from pyspark.sql.functions import from_json, window, count, to_date
+from pyspark.sql.functions import from_json, window, count, to_date, col
 from delta import configure_spark_with_delta_pip
 from delta.tables import DeltaTable
 import os
@@ -13,7 +13,7 @@ sys.path.insert(0, PROJECT_ROOT)
 
 
 from utils import upsert_to_delta
-from utils import SILVER_CHECKPOINT_PATH, SILVER_DELTA_PATH,BRONZE_DELTA_PATH
+from utils import SILVER_CHECKPOINT_PATH, SILVER_DELTA_PATH, BRONZE_DELTA_PATH
 
 """
 As we are going with medillion architecture in this project so each file represents a model ,
@@ -39,23 +39,57 @@ def main():
         .getOrCreate()
     )
 
-    # Read from Kafka via readStream
-    silver_df = (
-        spark.readStream.format("delta")
-        .option("kafka.bootstrap.servers", "localhost:9092")
-        .option("subscribe", "user_events")
-        .option("startingOffsets", "earliest")
-        .load()
+    # Read from delta via readStream
+    silver_df = spark.readStream.format("delta").path(BRONZE_DELTA_PATH).load()
+
+    # json parsing and transformation to be handled here with dedup
+
+    # lets setup the expecting schema for the upstream data , hardcoded field values do not handle schema evaluation (ps learned it the hard way)
+    schema = StructType(
+        [
+            StructField("user_id", IntegerType()),
+            StructField("event_type", StringType()),
+            StructField("timestamp", TimestampType()),
+            StructField("event_id", LongType()),
+        ]
     )
 
-    # no transformation and no schema convertion also just write the data
+    # kafka gives key/value as binary
+    silver_df = silver_df.selectExpr(
+        "CAST(key as STRING) as key", "CAST(value as STRING) as value"
+    )
+
+    # parsing from string to json
+    silver_df = silver_df.withColumn("parsed", from_json("value", schema)).select(
+        "parsed.*"
+    )
+
+    # creating another column to be used for partitioning
+    silver_df = silver_df.withColumn("event_date", to_date("timestamp"))
+
+    # watermarking and dedup are important in real time pipeline , they find duplicates between state stored in spark and new data all together
+    silver_df = (
+        silver_df.withWatermark("timestamp", "10 minutes")
+        .dropDuplicates(["event_id"])
+        .filter(
+            col("event_id").isNotNull()
+            & col("customer_id").isNotNull()
+            & col("timestamp").isNotNull()
+        )
+    )
+
     query = (
-        bronze_df.writeStream.foreachBatch(
+        silver_df.writeStream.foreachBatch(
             lambda df, batch_id: upsert_to_delta(
-                df, batch_id, query, BRONZE_DELTA_PATH, False
+                df,
+                batch_id,
+                "target.event_id=source.event_id and target.event_date=source.event_date",
+                SILVER_DELTA_PATH,
+                True,
+                ["event_date"],
             )
         )
-        .option("checkpointLocation", BRONZE_CHECKPOINT_PATH)
+        .option("checkpointLocation", SILVER_CHECKPOINT_PATH)
         .start()
     )
     try:
