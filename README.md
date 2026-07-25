@@ -1,6 +1,6 @@
 # Real-Time Streaming Data Pipeline using Apache Spark, Kafka & Delta Lake
 
-![Architecture](docs/architecture.png)
+![Architecture](architecture.png)
 
 ## Overview
 
