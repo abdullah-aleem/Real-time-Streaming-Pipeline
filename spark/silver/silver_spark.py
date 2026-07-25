@@ -40,7 +40,7 @@ def main():
     )
 
     # Read from delta via readStream
-    silver_df = spark.readStream.format("delta").path(BRONZE_DELTA_PATH).load()
+    silver_df = spark.readStream.format("delta").load(BRONZE_DELTA_PATH)
 
     # json parsing and transformation to be handled here with dedup
 
@@ -73,7 +73,7 @@ def main():
         .dropDuplicates(["event_id"])
         .filter(
             col("event_id").isNotNull()
-            & col("customer_id").isNotNull()
+            & col("event_type").isNotNull()
             & col("timestamp").isNotNull()
         )
     )
