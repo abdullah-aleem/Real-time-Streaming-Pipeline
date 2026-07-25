@@ -1,4 +1,5 @@
-import time 
+import time
+import uuid 
 from event_generater import EventGenerater
 import json 
 import random
@@ -8,7 +9,8 @@ def event_generator():
     return {
         "user_id": random.randint(1, 100),
         "event_type": random.choice(["click", "view", "purchase"]),
-        "timestamp": int(time.time())
+        "timestamp": int(time.time()),
+        "event_id":str(uuid.uuid4())
     }
 def main():
     producer= EventGenerater(bootstrap_servers="localhost:9092",topic="user_events")
