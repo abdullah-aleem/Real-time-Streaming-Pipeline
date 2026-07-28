@@ -1,6 +1,6 @@
 # Real-Time Streaming Data Pipeline using Apache Spark, Kafka & Delta Lake
 
-![Architecture](docs/architecture.png)
+![Architecture](architecture.png)
 
 ## Overview
 
@@ -136,10 +136,8 @@ Example columns:
 
 ```
 event_id
-customer_id
 event_type
-event_time
-_ingestion_time
+event_date
 ```
 
 Design principles:
@@ -239,11 +237,7 @@ Examples:
 ```
 Daily Transaction Metrics
 
-date
-country
-total_transactions
-successful_transactions
-failed_transactions
+event_count
 ```
 
 The Gold layer is optimized for:
