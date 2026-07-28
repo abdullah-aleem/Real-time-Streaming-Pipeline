@@ -43,14 +43,13 @@ def main():
     silver_df = spark.readStream.format("delta").load(BRONZE_DELTA_PATH)
 
     # json parsing and transformation to be handled here with dedup
-
     # lets setup the expecting schema for the upstream data , hardcoded field values do not handle schema evaluation (ps learned it the hard way)
     schema = StructType(
         [
             StructField("user_id", IntegerType()),
             StructField("event_type", StringType()),
             StructField("timestamp", TimestampType()),
-            StructField("event_id", LongType()),
+            StructField("event_id", StringType()),
         ]
     )
 

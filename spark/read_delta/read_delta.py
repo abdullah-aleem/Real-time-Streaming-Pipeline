@@ -8,7 +8,7 @@ def main():
     #to remove any cached spark session 
     SparkSession.builder.getOrCreate().stop()
     
-    #
+    
     spark =( 
         SparkSession.builder.appName("ReadingDeltaTable")
         .master("local[*]")
@@ -24,7 +24,7 @@ def main():
     # read stream from kafka
     delta_df = (
         spark.read.format("delta")
-        .option("path", "C:/delta/kafka-stream")
+        .option("path", "C:/delta/bronze")
         .load()
     )
     delta_df.show()

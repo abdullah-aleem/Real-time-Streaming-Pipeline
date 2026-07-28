@@ -13,6 +13,7 @@ def upsert_to_delta(batch_df,batch_id,query:str,path:str,is_silver:bool,partitio
     '''
     if is_silver:
         #try to also work when table does not exit
+        
         try:
             delta_table=DeltaTable.forPath(batch_df.sparkSession,path)
             delta_table.alias("target").merge(batch_df.alias("source"),query).whenNotMatchedInsertAll().execute()

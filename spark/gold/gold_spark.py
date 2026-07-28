@@ -50,8 +50,13 @@ def main():
         window("timestamp", "10 minutes"), "event_type"
     ).agg(count("*").alias("event_count"))
 
-
-    
+    gold_df = gold_df.select(
+        col("window.start").alias("window_start"),
+        col("window.end").alias("window_end"),
+        "event_type",
+        "event_count"
+    )
+        
     query = (
         gold_df.writeStream.foreachBatch(
             lambda df, batch_id: upsert_to_delta(
